@@ -38,7 +38,7 @@
     
     for (NSDictionary *object in reponse) {
         
-        NSString *term = [object objectForKey:keyForSearchTagContent(service)];
+        NSString *term = [object objectForKey:keyPathForSearchTagContent(service)];
         DZNPhotoTag *tag = [DZNPhotoTag newTagWithTerm:term service:service];
         
         [result addObject:tag];

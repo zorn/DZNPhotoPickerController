@@ -195,6 +195,8 @@
     _authorUsername = nil;
     _authorProfileURL = nil;
     _serviceName = nil;
+    _width = nil;
+    _height = nil;
 }
 
 @end

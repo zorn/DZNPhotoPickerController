@@ -38,7 +38,7 @@ NSURL *baseURLForService(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *tagsResourceKeyPathForService(DZNPhotoPickerControllerServices service)
+NSString *keyPathForTagService(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:
@@ -48,7 +48,7 @@ NSString *tagsResourceKeyPathForService(DZNPhotoPickerControllerServices service
     }
 }
 
-NSString *tagSearchUrlPathForService(DZNPhotoPickerControllerServices service)
+NSString *urlPathForTagService(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerServiceFlickr:             return @"flickr.tags.getRelated";
@@ -57,7 +57,7 @@ NSString *tagSearchUrlPathForService(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *photosResourceKeyPathForService(DZNPhotoPickerControllerServices service)
+NSString *keyPathForPhotoService(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:              return @"photos";
@@ -70,7 +70,7 @@ NSString *photosResourceKeyPathForService(DZNPhotoPickerControllerServices servi
     }
 }
 
-NSString *photoSearchUrlPathForService(DZNPhotoPickerControllerServices service)
+NSString *urlPathForPhotoService(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:              return @"photos/search";
@@ -83,7 +83,7 @@ NSString *photoSearchUrlPathForService(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *authUrlPathForService(DZNPhotoPickerControllerServices service)
+NSString *urlPathForAuthService(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerServiceGettyImages:        return @"oauth2/token/";
@@ -103,7 +103,7 @@ NSString *keyForAPIConsumerKey(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *keyForAPIConsumerSecret(DZNPhotoPickerControllerServices service)
+NSString *keyPathForAPIConsumerSecret(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
             
@@ -112,7 +112,7 @@ NSString *keyForAPIConsumerSecret(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *keyForSearchTerm(DZNPhotoPickerControllerServices service)
+NSString *keyPathForSearchTerm(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:              return @"term";
@@ -125,7 +125,7 @@ NSString *keyForSearchTerm(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *keyForSearchTag(DZNPhotoPickerControllerServices service)
+NSString *keyPathForSearchTag(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:
@@ -136,7 +136,7 @@ NSString *keyForSearchTag(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *keyForSearchResultPerPage(DZNPhotoPickerControllerServices service)
+NSString *keyPathForSearchResultPerPage(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:              return @"rpp";
@@ -147,7 +147,7 @@ NSString *keyForSearchResultPerPage(DZNPhotoPickerControllerServices service)
     }
 }
 
-NSString *keyForSearchTagContent(DZNPhotoPickerControllerServices service)
+NSString *keyPathForSearchTagContent(DZNPhotoPickerControllerServices service)
 {
     switch (service) {
         case DZNPhotoPickerControllerService500px:
@@ -160,10 +160,10 @@ NSString *keyForSearchTagContent(DZNPhotoPickerControllerServices service)
 NSString *keyPathForObjectName(DZNPhotoPickerControllerServices service, NSString *objectName)
 {
     if ([objectName isEqualToString:[DZNPhotoTag name]]) {
-        return tagsResourceKeyPathForService(service);
+        return keyPathForTagService(service);
     }
     else if ([objectName isEqualToString:[DZNPhotoMetadata name]]) {
-        return photosResourceKeyPathForService(service);
+        return keyPathForPhotoService(service);
     }
     return nil;
 }

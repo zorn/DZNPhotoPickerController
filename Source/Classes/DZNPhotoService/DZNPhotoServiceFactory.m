@@ -24,7 +24,6 @@
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         _sharedInstance = [DZNPhotoServiceFactory new];
-        _sharedInstance.clients = [NSMutableArray new];
     });
     return _sharedInstance;
 }
@@ -34,6 +33,10 @@
 
 - (id<DZNPhotoServiceClientProtocol>)clientForService:(DZNPhotoPickerControllerServices)service
 {
+    if (!_clients) {
+        _clients = [NSMutableArray new];
+    }
+    
     for (DZNPhotoServiceClient *client in self.clients) {
         if (client.service == service) {
             return client;
@@ -83,8 +86,8 @@
         [client cancelRequest];
     }
     
+    [_clients removeAllObjects];
     _clients = nil;
-    _clients = [NSMutableArray new];
 }
 
 @end

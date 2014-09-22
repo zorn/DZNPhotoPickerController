@@ -122,10 +122,10 @@
     
     NSMutableDictionary *params = [NSMutableDictionary new];
     [params setObject:[self consumerKey] forKey:keyForAPIConsumerKey(self.service)];
-    [params setObject:keyword forKey:keyForSearchTag(self.service)];
+    [params setObject:keyword forKey:keyPathForSearchTag(self.service)];
     
     if (self.service == DZNPhotoPickerControllerServiceFlickr) {
-        [params setObject:tagSearchUrlPathForService(self.service) forKey:@"method"];
+        [params setObject:urlPathForTagService(self.service) forKey:@"method"];
         [params setObject:@"json" forKey:@"format"];
     }
     
@@ -137,6 +137,7 @@
     NSAssert(keyword, @"'keyword' cannot be nil for %@", NSStringFromService(self.service));
     NSAssert((resultPerPage > 0), @"'result per page' must be higher than 0 for %@", NSStringFromService(self.service));
     NSAssert([self consumerKey], @"'consumerKey' cannot be nil for %@", NSStringFromService(self.service));
+    
     if (isConsumerSecretRequiredForService(self.service)) {
         NSAssert([self consumerSecret], @"'consumerSecret' cannot be nil for %@", NSStringFromService(self.service));
     }
@@ -149,13 +150,13 @@
     
     //Bing requires parameters to be wrapped in '' values.
     if (self.service == DZNPhotoPickerControllerServiceBingImages) {
-        [params setObject:[NSString stringWithFormat:@"'%@'", keyword] forKey:keyForSearchTerm(self.service)];
+        [params setObject:[NSString stringWithFormat:@"'%@'", keyword] forKey:keyPathForSearchTerm(self.service)];
     } else {
-        [params setObject:keyword forKey:keyForSearchTerm(self.service)];
+        [params setObject:keyword forKey:keyPathForSearchTerm(self.service)];
     }
     
-    if (keyForSearchResultPerPage(self.service)) {
-        [params setObject:@(resultPerPage) forKey:keyForSearchResultPerPage(self.service)];
+    if (keyPathForSearchResultPerPage(self.service)) {
+        [params setObject:@(resultPerPage) forKey:keyPathForSearchResultPerPage(self.service)];
     }
     if (self.service == DZNPhotoPickerControllerService500px || self.service == DZNPhotoPickerControllerServiceFlickr || self.service == DZNPhotoPickerControllerServiceGettyImages) {
         [params setObject:@(page) forKey:@"page"];
@@ -168,7 +169,7 @@
     }
     else if (self.service == DZNPhotoPickerControllerServiceFlickr)
     {
-        [params setObject:photoSearchUrlPathForService(self.service) forKey:@"method"];
+        [params setObject:urlPathForPhotoService(self.service) forKey:@"method"];
         [params setObject:@"json" forKey:@"format"];
         [params setObject:@"photos" forKey:@"media"];
         [params setObject:@(YES) forKey:@"in_gallery"];
@@ -177,7 +178,7 @@
     }
     else if (self.service == DZNPhotoPickerControllerServiceGoogleImages)
     {
-        [params setObject:[self consumerSecret] forKey:keyForAPIConsumerSecret(self.service)];
+        [params setObject:[self consumerSecret] forKey:keyPathForAPIConsumerSecret(self.service)];
         [params setObject:@"image" forKey:@"searchType"];
         [params setObject:@"medium" forKey:@"safe"];
         if (page > 1) [params setObject:@((page - 1) * resultPerPage + 1) forKey:@"start"];
@@ -199,7 +200,7 @@
     return params;
 }
 
-- (NSData *)processData:(NSData *)data
+- (NSData *)processJSONResponseData:(NSData *)data
 {
     if (self.service == DZNPhotoPickerControllerServiceFlickr) {
         
@@ -224,7 +225,7 @@
         
         if (self.service == DZNPhotoPickerControllerServiceFlickr) {
             NSString *keyword = [json valueForKeyPath:@"tags.source"];
-            if (keyword) [objects insertObject:@{keyForSearchTagContent(self.service):keyword} atIndex:0];
+            if (keyword) [objects insertObject:@{keyPathForSearchTagContent(self.service):keyword} atIndex:0];
         }
         
         return [DZNPhotoTag photoTagListFromService:self.service withResponse:objects];
@@ -254,7 +255,7 @@
 
 - (void)searchTagsWithKeyword:(NSString *)keyword completion:(DZNHTTPRequestCompletion)completion
 {
-    NSString *path = tagSearchUrlPathForService(self.service);
+    NSString *path = urlPathForTagService(self.service);
     
     NSDictionary *params = [self tagsParamsWithKeyword:keyword];
     [self getObject:[DZNPhotoTag class] path:path params:params completion:completion];
@@ -262,7 +263,7 @@
 
 - (void)searchPhotosWithKeyword:(NSString *)keyword page:(NSInteger)page resultPerPage:(NSInteger)resultPerPage completion:(DZNHTTPRequestCompletion)completion
 {
-    NSString *path = photoSearchUrlPathForService(self.service);
+    NSString *path = urlPathForPhotoService(self.service);
 
     NSDictionary *params = [self photosParamsWithKeyword:keyword page:page resultPerPage:resultPerPage];
     [self getObject:[DZNPhotoMetadata class] path:path params:params completion:completion];
@@ -289,7 +290,7 @@
     }
     
     if (self.service == DZNPhotoPickerControllerServiceInstagram) {
-        NSString *keyword = [params objectForKey:keyForSearchTerm(self.service)];
+        NSString *keyword = [params objectForKey:keyPathForSearchTerm(self.service)];
         NSString *encodedKeyword = [keyword stringByReplacingOccurrencesOfString:@" " withString:@""];
         path = [path stringByReplacingOccurrencesOfString:@"%@" withString:encodedKeyword];
     }
@@ -300,7 +301,7 @@
     [self GET:path parameters:params
       success:^(AFHTTPRequestOperation *operation, id response) {
           
-          NSData *data = [self processData:response];
+          NSData *data = [self processJSONResponseData:response];
           NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableLeaves | NSJSONReadingAllowFragments error:nil];
           
           _loading = NO;
@@ -326,7 +327,7 @@
     NSURL *baseURL = baseURLForService(self.service);
     GROAuth2SessionManager *sessionManager = [GROAuth2SessionManager managerWithBaseURL:baseURL clientID:key secret:secret];
     
-    NSString *path = authUrlPathForService(self.service);
+    NSString *path = urlPathForAuthService(self.service);
     
     NSDictionary *params = @{};
     
