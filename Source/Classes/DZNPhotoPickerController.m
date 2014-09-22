@@ -12,6 +12,8 @@
 #import "DZNPhotoDisplayViewController.h"
 #import "DZNPhotoServiceFactory.h"
 
+#import "SDWebImageManager.h"
+
 #import <MobileCoreServices/UTCoreTypes.h>
 
 static DZNPhotoPickerControllerFinalizationBlock _finalizationBlock;
@@ -219,6 +221,9 @@ static DZNPhotoPickerControllerCancellationBlock _cancellationBlock;
     if ([controller respondsToSelector:@selector(stopLoadingRequest)]) {
         [controller stopLoadingRequest];
     }
+    
+    // Cancels all image downloads
+    [[SDWebImageManager sharedManager] cancelAll];
     
     if (self.cancellationBlock) {
         self.cancellationBlock(self);

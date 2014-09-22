@@ -18,7 +18,6 @@
 
 #import "SDWebImageManager.h"
 #import "UIScrollView+EmptyDataSet.h"
-#import "MBProgressHUD.h"
 
 static NSString *kDZNPhotoCellViewIdentifier = @"kDZNPhotoCellViewIdentifier";
 static NSString *kDZNPhotoFooterViewIdentifier = @"kDZNPhotoFooterViewIdentifier";
@@ -32,6 +31,7 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
 @property (nonatomic, readonly) UISearchBar *searchBar;
 @property (nonatomic, readonly) UISearchDisplayController *searchController;
 @property (nonatomic, readonly) UIButton *loadButton;
+@property (nonatomic, readonly) UIView *hudView;
 @property (nonatomic, readonly) UIActivityIndicatorView *activityIndicator;
 
 @property (nonatomic, strong) NSMutableArray *metadataList;
@@ -49,6 +49,7 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
 @synthesize searchBar = _searchBar;
 @synthesize searchController = _searchController;
 @synthesize loadButton = _loadButton;
+@synthesize hudView = _hudView;
 @synthesize activityIndicator = _activityIndicator;
 @synthesize searchTimer = _searchTimer;
 
@@ -117,6 +118,11 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
             [_searchBar becomeFirstResponder];
         }
     }
+}
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
 }
 
 
@@ -215,6 +221,60 @@ Returns the custom collection view layout.
         [_loadButton setBackgroundColor:self.collectionView.backgroundView.backgroundColor];
     }
     return _loadButton;
+}
+
+- (UIView *)hudView
+{
+    if (!_hudView)
+    {
+        _hudView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 100.0, 100.0)];
+        _hudView.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin|UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin;
+        _hudView.alpha = 0.0;
+        
+        _hudView.layer.cornerRadius = 10.0;
+        _hudView.layer.masksToBounds = YES;
+        
+        [self.view addSubview:_hudView];
+        
+        UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
+        indicator.translatesAutoresizingMaskIntoConstraints = NO;
+        indicator.color = [UIColor whiteColor];
+        [indicator startAnimating];
+        [_hudView addSubview:indicator];
+        
+        UILabel *label = [[UILabel alloc] init];
+        label.translatesAutoresizingMaskIntoConstraints = NO;
+        label.font = [UIFont boldSystemFontOfSize:14.0];
+        label.textAlignment = NSTextAlignmentCenter;
+        
+        label.text = NSLocalizedString(@"Downloading", nil);
+        [_hudView addSubview:label];
+
+        NSDictionary *views = NSDictionaryOfVariableBindings(indicator,label);
+        
+        [_hudView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-20-[indicator][label]-15-|" options:0 metrics:nil views:views]];
+        [_hudView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[indicator]|" options:0 metrics:nil views:views]];
+        [_hudView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[label]|" options:0 metrics:nil views:views]];
+        
+        // Configures the background
+        if ([UIVisualEffectView class]) {
+            
+            UIBlurEffect *visualEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleExtraLight];
+            
+            UIVisualEffectView *effectView = [[UIVisualEffectView alloc] initWithEffect:visualEffect];
+            effectView.frame = _hudView.bounds;
+            [_hudView insertSubview:effectView atIndex:0];
+            
+            label.textColor = [UIColor darkGrayColor];
+            indicator.color = [UIColor blackColor];
+        }
+        else {
+            _hudView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.8];
+            label.textColor = [UIColor whiteColor];
+            indicator.color = [UIColor whiteColor];
+        }
+    }
+    return _hudView;
 }
 
 /*
@@ -418,6 +478,35 @@ Returns the custom collection view layout.
 }
 
 /*
+ Toggles the hud view.
+ */
+- (void)setHudViewVisible:(BOOL)visible
+{
+    if ((visible && self.hudView.alpha > 0.0) || (!visible && self.hudView.alpha < 1.0)) {
+        return;
+    }
+    
+    if (visible) {
+        self.hudView.center = self.view.center;
+        
+        [UIView animateWithDuration:0.3 animations:^{
+            self.hudView.alpha = 1.0;
+        }];
+    }
+    else {
+        [UIView animateWithDuration:0.3 animations:^{
+            self.hudView.alpha = 0.0;
+        } completion:^(BOOL finished) {
+            [self.hudView removeFromSuperview];
+            _hudView = nil;
+        }];
+    }
+    
+    self.collectionView.userInteractionEnabled = !visible;
+    self.searchBar.userInteractionEnabled = !visible;
+}
+
+/*
  Toggles the activity indicators on the status bar & footer view.
  */
 - (void)setActivityIndicatorsVisible:(BOOL)visible
@@ -509,19 +598,16 @@ Returns the custom collection view layout.
     }
     else {
         
-        // Presents a hud right after selecting an image while it's been downloaded
-        MBProgressHUD *hud = [MBProgressHUD showHUDAddedTo:self.navigationController.view animated:YES];
-        hud.mode = MBProgressHUDModeIndeterminate;
-        hud.labelText = NSLocalizedString(@"Loading", nil);
-        hud.animationType = MBProgressHUDAnimationFade;
-        hud.dimBackground = YES;
+        [self setHudViewVisible:YES];
+        [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
         
-        [self setActivityIndicatorsVisible:YES];
+        [[SDWebImageManager sharedManager] cancelAll];
         
         [[SDWebImageDownloader sharedDownloader] downloadImageWithURL:metadata.sourceURL
-                                                              options:SDWebImageCacheMemoryOnly|SDWebImageRetryFailed
+                                                              options:SDWebImageDownloaderHighPriority
                                                              progress:NULL
                                                             completed:^(UIImage *image, NSData *data, NSError *error, BOOL finished){
+                                                                
                                                                 if (image) {
                                                                     [DZNPhotoEditorViewController didFinishPickingOriginalImage:image
                                                                                                                     editedImage:nil
@@ -535,8 +621,8 @@ Returns the custom collection view layout.
                                                                     [self setLoadingError:error];
                                                                 }
                                                                 
-                                                                [hud hide:YES];
-                                                                [self setActivityIndicatorsVisible:NO];
+                                                                [self setHudViewVisible:NO];
+                                                                [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
                                                             }];
     }
     
