@@ -32,6 +32,7 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
 @property (nonatomic, readonly) UISearchDisplayController *searchController;
 @property (nonatomic, readonly) UIButton *loadButton;
 @property (nonatomic, readonly) UIView *hudView;
+@property (nonatomic, readonly) UILabel *hudLabel;
 @property (nonatomic, readonly) UIActivityIndicatorView *activityIndicator;
 
 @property (nonatomic, strong) NSMutableArray *metadataList;
@@ -227,14 +228,14 @@ Returns the custom collection view layout.
 {
     if (!_hudView)
     {
-        _hudView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 100.0, 100.0)];
+        _hudView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 120.0, 120.0)];
         _hudView.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin|UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin;
         _hudView.alpha = 0.0;
         
         _hudView.layer.cornerRadius = 10.0;
         _hudView.layer.masksToBounds = YES;
         
-        [self.view addSubview:_hudView];
+        [self.navigationController.view addSubview:_hudView];
         
         UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
         indicator.translatesAutoresizingMaskIntoConstraints = NO;
@@ -244,10 +245,10 @@ Returns the custom collection view layout.
         
         UILabel *label = [[UILabel alloc] init];
         label.translatesAutoresizingMaskIntoConstraints = NO;
-        label.font = [UIFont boldSystemFontOfSize:14.0];
+        label.font = [UIFont boldSystemFontOfSize:16.0];
         label.textAlignment = NSTextAlignmentCenter;
         
-        label.text = NSLocalizedString(@"Downloading", nil);
+        label.text = NSLocalizedString(@"Loading", nil);
         [_hudView addSubview:label];
 
         NSDictionary *views = NSDictionaryOfVariableBindings(indicator,label);
@@ -265,7 +266,7 @@ Returns the custom collection view layout.
             effectView.frame = _hudView.bounds;
             [_hudView insertSubview:effectView atIndex:0];
             
-            label.textColor = [UIColor darkGrayColor];
+            label.textColor = [UIColor colorWithWhite:0.1 alpha:1.0];
             indicator.color = [UIColor blackColor];
         }
         else {
@@ -273,6 +274,8 @@ Returns the custom collection view layout.
             label.textColor = [UIColor whiteColor];
             indicator.color = [UIColor whiteColor];
         }
+        
+        _hudLabel = label;
     }
     return _hudView;
 }
@@ -487,7 +490,7 @@ Returns the custom collection view layout.
     }
     
     if (visible) {
-        self.hudView.center = self.view.center;
+        self.hudView.center = self.navigationController.view.center;
         
         [UIView animateWithDuration:0.3 animations:^{
             self.hudView.alpha = 1.0;
@@ -502,8 +505,7 @@ Returns the custom collection view layout.
         }];
     }
     
-    self.collectionView.userInteractionEnabled = !visible;
-    self.searchBar.userInteractionEnabled = !visible;
+    self.navigationController.view.userInteractionEnabled = !visible;
 }
 
 /*
@@ -511,19 +513,10 @@ Returns the custom collection view layout.
  */
 - (void)setActivityIndicatorsVisible:(BOOL)visible
 {
+    [self setHudViewVisible:visible];
+    
     [UIApplication sharedApplication].networkActivityIndicatorVisible = visible;
-    
-    if (visible) {
-        self.activityIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleGray;
-        [self.activityIndicator startAnimating];
-        self.loadButton.hidden = YES;
-    }
-    else {
-        [self.activityIndicator stopAnimating];
-        self.loadButton.hidden = NO;
-        self.loadButton.enabled = YES;
-    }
-    
+
     _loading = visible;
 }
 
@@ -598,8 +591,9 @@ Returns the custom collection view layout.
     }
     else {
         
-        [self setHudViewVisible:YES];
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+        [self setActivityIndicatorsVisible:YES];
+        
+        _hudLabel.text = NSLocalizedString(@"Downloading", nil);
         
         [[SDWebImageManager sharedManager] cancelAll];
         
@@ -621,8 +615,7 @@ Returns the custom collection view layout.
                                                                     [self setLoadingError:error];
                                                                 }
                                                                 
-                                                                [self setHudViewVisible:NO];
-                                                                [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+                                                                [self setActivityIndicatorsVisible:NO];
                                                             }];
     }
     
@@ -1040,35 +1033,14 @@ Returns the custom collection view layout.
 
 - (NSAttributedString *)titleForEmptyDataSet:(UIScrollView *)scrollView
 {
-    if (!self.loading) {
-        NSString *text = NSLocalizedString(@"No Photos Found", nil);
-        return [[NSAttributedString alloc] initWithString:text attributes:nil];
-    }
-    
-    return nil;
+    NSString *text = NSLocalizedString(@"No Photos Found", nil);
+    return [[NSAttributedString alloc] initWithString:text attributes:nil];
 }
 
 - (NSAttributedString *)descriptionForEmptyDataSet:(UIScrollView *)scrollView
 {
-    if (!self.loading) {
-        NSString *text = NSLocalizedString(@"Make sure that all words are\nspelled correctly.", nil);
-        return [[NSAttributedString alloc] initWithString:text attributes:nil];
-    }
-    
-    return nil;
-}
-
-- (UIView *)customViewForEmptyDataSet:(UIScrollView *)scrollView
-{
-    if (self.loading) {
-        self.activityIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
-        self.activityIndicator.color = [UIColor grayColor];
-        self.activityIndicator.autoresizingMask = UIViewAutoresizingNone;
-        [self.activityIndicator startAnimating];
-        return self.activityIndicator;
-    }
-    
-    return nil;
+    NSString *text = NSLocalizedString(@"Make sure that all words are\nspelled correctly.", nil);
+    return [[NSAttributedString alloc] initWithString:text attributes:nil];
 }
 
 - (UIColor *)backgroundColorForEmptyDataSet:(UIScrollView *)scrollView
@@ -1078,6 +1050,11 @@ Returns the custom collection view layout.
 
 
 #pragma mark - DZNEmptyDataSetDelegate Methods
+
+- (BOOL)emptyDataSetShouldDisplay:(UIScrollView *)scrollView
+{
+    return !self.loading;
+}
 
 - (BOOL)emptyDataSetShouldAllowScroll:(UIScrollView *)scrollView
 {
